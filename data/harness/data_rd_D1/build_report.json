@@ -1,0 +1,34 @@
+{
+ "dataset": "D1",
+ "M_shape": [
+  861,
+  253
+ ],
+ "n_pos": 4517,
+ "lnc_rows_with_content": 687,
+ "lnc_blocks": {
+  "rnafm_chunk": [
+   0,
+   640
+  ],
+  "gtex": [
+   640,
+   708
+  ]
+ },
+ "sources": {
+  "M": "IHC-LDA/data/raw/D1/LDA.txt",
+  "DSS": "IHC-LDA/data/raw/D1/DSS.txt",
+  "lnc": [
+   "IHC-LDA/features/D1/rnafm_chunk.npy",
+   "IHC-LDA/features/D1/gtex.npy"
+  ],
+  "dis": "IHC-LDA/features/D1/distext.npy"
+ },
+ "sha256_16": {
+  "M.npy": "4d2bffdb553f444c",
+  "lnc_ortho.npy": "58a3fa1edff45764",
+  "disease_emb.npy": "9ba45382b364a47e",
+  "disease_semsim.npy": "64a2c85135ee2a36"
+ }
+}

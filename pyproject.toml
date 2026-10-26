@@ -1,0 +1,10 @@
+[project]
+name = "fghgcl"
+version = "0.1.0"
+description = "FG-HGCL: feature-grounded hypergraph contrastive learning for lncRNA-disease both-cold prediction"
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

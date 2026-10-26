@@ -1,0 +1,7 @@
+{
+  "model": "pritamdeka/S-BioBert-snli-multinli-stsb",
+  "dim": 768,
+  "n": 245,
+  "device": "cuda",
+  "normalized": true
+}

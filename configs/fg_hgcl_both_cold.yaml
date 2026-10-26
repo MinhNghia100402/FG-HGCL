@@ -1,0 +1,61 @@
+# FG-HGCL — DỰ ĐOÁN MỐI LIÊN KẾT GIỮA LncRNA VÀ BỆNH BẰNG HỌC TƯƠNG PHẢN TRÊN SIÊU ĐỒ THỊ
+# Ablation matrix of FG_HGCL_both_cold_research_plan.md §6. Every experiment = `base` + its overrides
+# (keys of fghgcl.model.Config). Run with scripts/run_ablation.py.
+protocol:
+  harness: CDELDA bench, cold protocol, fold seed 2026, 5 folds (data/splits/<variant>_harness_seed2026.json)
+  selection: inner validation (20 % train lncRNAs x 20 % train diseases), 5 folds x inner seeds 0 1 2,
+             one common epoch per config = argmax of the averaged inner-val curve (scripts/paired.py)
+  metric: AUPR 1:1 (CDELDA primary); test block scored once, after the config is locked (run_harness.py --fixed)
+  variants: [l2d5, D1, D2]          # l2d5 = D3 = CDELDA benchmark (primary)
+
+base:                               # chosen on l2d5 inner validation (docs/phase2_3_inner_val.md, improvement_roadmap.md)
+  m: 32
+  hidden: 256
+  drop: 0.2
+  wd: 0.001
+  lr: 0.001
+  epochs: 500
+  eval_every: 10
+  protocol: A                       # strict inductive
+  k_lnc: 10
+  k_dis: 10
+  g_lnc: 16
+  g_dis: 9
+  hg_layers: 1
+  fusion: residual
+  tau: 0.2
+  decoder: dot
+
+experiments:
+  B0f:        {views: []}                                            # feature branch only (CDELDA recipe, MLP)
+  B2:         {views: [knn, gmm], lam_cl: 0.0}                       # + HGCN, BCE only
+  B3:         {views: [knn, gmm], lam_cl: 0.5}                       # + feature-hypergraph InfoNCE (lam from C1)
+  B4:         {views: [gmm], lam_cl: 0.5}                            # GMM only
+  B5:         {views: [knn], lam_cl: 0.5}                            # KNN only
+  B6:         {views: [knn, gmm], lam_cl: 0.5}                       # KNN + GMM (= B3)
+  B7:         {views: [knn, gmm], lam_cl: 0.5, fusion: gated}        # gated fusion
+  B8:         {views: [knn, gmm], lam_cl: 0.5, fusion: concat}       # concatenation fusion
+  B9:         {views: [knn, gmm], lam_cl: 0.5, aug: sim, aug_p: 0.2} # similarity-guided hypergraph augmentation
+  B9u:        {views: [knn, gmm], lam_cl: 0.5, aug: uniform, aug_p: 0.2}   # control for B9
+  B3_bilin:   {views: [knn, gmm], lam_cl: 0.5, decoder: bilinear}    # decoder ablation (separate, plan §2.5)
+  C2:         {views: [knn, gmm], lam_cl: 0.5, lam_assoc: 0.5}       # + association-hypergraph contrastive view
+  B3_protB:   {views: [knn, gmm], lam_cl: 0.5, protocol: B}          # feature-transductive (report separately)
+
+  # --- Round 2 (2026-10-22): hypergraph encoder placement of IHC-LDA v22, strict Protocol A ---
+  V22_hg:     {views: [knn], k_lnc: 20, k_dis: 20, hg_place: inner, hg_zscore: true, fusion: g}                  # hypergraph tower only, BCE
+  V22:        {views: [knn], k_lnc: 20, k_dis: 20, hg_place: inner, hg_zscore: true, fusion: g, lam_assoc: 0.5} # + InfoNCE with the association hypergraph (v22 recipe)
+  B3i:        {views: [knn, gmm], k_lnc: 20, k_dis: 20, hg_place: inner, hg_zscore: true, lam_cl: 0.5}           # feature <-> hypergraph-tower InfoNCE, residual
+  B7i:        {views: [knn, gmm], k_lnc: 20, k_dis: 20, hg_place: inner, hg_zscore: true, lam_cl: 0.5, fusion: gated}
+  B7i_C2:     {views: [knn, gmm], k_lnc: 20, k_dis: 20, hg_place: inner, hg_zscore: true, lam_cl: 0.5, fusion: gated, lam_assoc: 0.5}
+
+  # --- FG-HGCL v2 (2026-10-23, docs/final_lock_v2.md): + multi-view disease text (frozen S-BioBERT name / defn / syn) ---
+  B3v:        {views: [knn, gmm], lam_cl: 0.5, dis_views: [name, defn, syn], dis_view_feats: true}
+  B3v_m128:   {views: [knn, gmm], lam_cl: 0.5, dis_views: [name, defn, syn], dis_view_feats: true, m: 128}
+  B0fv:       {views: [], dis_views: [name, defn, syn], dis_view_feats: true}                      # ablation: no hypergraph
+
+  # --- InfoNCE as the MAIN association loss (2026-10-23) ---
+  B3_nce:     {views: [knn, gmm], lam_cl: 0.5, link_loss: infonce}                      # K 64, tau 1
+  B3_nce_t05: {views: [knn, gmm], lam_cl: 0.5, link_loss: infonce, link_tau: 0.5}
+  B3_nceb:    {views: [knn, gmm], lam_cl: 0.5, link_loss: infonce+bce}
+  B3v_nce:    {views: [knn, gmm], lam_cl: 0.5, dis_views: [name, defn, syn], dis_view_feats: true, link_loss: infonce}
+  B3v_nceb:   {views: [knn, gmm], lam_cl: 0.5, dis_views: [name, defn, syn], dis_view_feats: true, link_loss: infonce+bce}

@@ -1,0 +1,11 @@
+# Baselines in CDELDA's harness (plan §6 B0, B1). Run with scripts/run_baseline.py --model <id> --variant <v>.
+B0:
+  name: TwoTower (content)
+  source: CDELDA snapshot_src/twoside_models.TwoTowerContent via bench/runner.py registry (unchanged)
+  hyperparameters: CDELDA defaults (TT_M 128, TT_WD 1e-3, TT_DROPOUT 0.2, TT_LR 1e-3, TT_EPOCHS 500)
+B1:
+  name: HGCMLDA-clean (paper HP, Dataset1)
+  source: IHC-LDA scripts/hgcmlda_harness.py (HGCMLDA released code; GIPK / LFS recomputed from train edges only)
+  hyperparameters: HGCMLDA paper, Dataset1 (k 11, g 9, beta 0.05, 1550 epochs, lr 1e-4), epoch chosen on inner val
+reference_only:                     # cited, not rerun (no LoRA in this project)
+  CDELDA: TwoTower-PEFT-disease (LoRA S-BioBERT), results/reference/cdelda_rerun_l2d5_cold.json (both-cold 0.7216)

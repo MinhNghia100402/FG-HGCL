@@ -1,0 +1,22 @@
+# HGCMLDA -> FG-HGCL module-replacement chain (fghgcl/chain.py). Each step = the previous step + one module change.
+# DỰ ĐOÁN MỐI LIÊN KẾT GIỮA LncRNA VÀ BỆNH BẰNG HỌC TƯƠNG PHẢN TRÊN SIÊU ĐỒ THỊ
+base: {model: chain}                                     # = HGCMLDA (paper HP Dataset1), similarities from train edges
+steps:
+  S0: {}                                                 # HGCMLDA-clean, re-implemented
+  S1: {input: content}                                   # M1: node features instead of label-derived IL / ID
+  S2: {input: content, protocol: A}                      # M2: strict inductive hypergraphs
+  S3: {input: content, protocol: A, branch2: tower}      # M6: VAE over association rows -> feature tower
+  S4: {input: content, protocol: A, branch2: tower, loss: bce, lr: 0.001, wd: 0.001, epochs: 500, eval_every: 10}   # M7: objective
+  S5: {input: content, protocol: A, branch2: tower, loss: bce, lr: 0.001, wd: 0.001, epochs: 500, eval_every: 10,
+       cl: feat_hg, lam_cl: 0.5}                         # M4: KNN<->GMM GRACE -> feature<->hypergraph InfoNCE
+  S5b: {input: content, protocol: A, branch2: tower, loss: bce, lr: 0.001, wd: 0.001, epochs: 500, eval_every: 10,
+        cl: both, lam_cl: 0.5}                           # M4 variant: keep GRACE and add feature<->hypergraph InfoNCE
+  S6m: {input: content, protocol: A, branch2: tower, loss: bce, lr: 0.001, wd: 0.001, epochs: 500, eval_every: 10,
+        cl: feat_hg, lam_cl: 0.5, fusion: mean}          # M5: MS-CAM -> mean
+  S6g: {input: content, protocol: A, branch2: tower, loss: bce, lr: 0.001, wd: 0.001, epochs: 500, eval_every: 10,
+        cl: feat_hg, lam_cl: 0.5, fusion: gated}         # M5: MS-CAM -> gated
+  # LEAKY comparison (HGCMLDA protocol, label_src full): report separately
+  L0: {label_src: full}                                  # HGCMLDA-leaky, re-implemented
+  L5: {input: content+label, label_src: full, branch2: tower, loss: bce, lr: 0.001, wd: 0.001, epochs: 500,
+       eval_every: 10, cl: feat_hg, lam_cl: 0.5}         # FG-HGCL modules on HGCMLDA's (leaky) inputs, Protocol B
+skip_variants: [l2d5]                                  # the chain is the HGCMLDA comparison: D1, D2 only (user decision 2026-10-22)

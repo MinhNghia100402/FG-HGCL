@@ -1,0 +1,32 @@
+# Python / tooling
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# Private: thesis report, defense deck, research notes / conclusions, experiment results (kept locally only)
+report/
+presentation/
+docs/
+results/
+CLAUDE.md
+FG_HGCL_both_cold_research_plan.md
+
+# Data: published (harness inputs, split manifests, cross-dataset maps) except unused large features
+data/harness/data_rd_l2d5/lnc_ortho_rs10k15.npy
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+.git-credentials
+credentials*
+*token*

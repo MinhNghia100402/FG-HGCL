@@ -1,0 +1,29 @@
+{
+  "dataset": "RNADisease v4.0 core, k-core(lnc>=2, dis>=5)",
+  "filter": {
+    "kcore_min_lnc_diseases": 2,
+    "kcore_min_dis_lncRNAs": 5
+  },
+  "core": {
+    "n_lnc": 5102,
+    "n_dis": 245,
+    "n_assoc": 20197,
+    "density": 0.0161577295511961,
+    "lnc_ortho_content_rows": 5035,
+    "lnc_ortho_zero_rows": 67,
+    "dis_freq": {
+      "min": 5,
+      "max": 2243,
+      "mean": 82.43673706054688
+    },
+    "lnc_freq": {
+      "min": 2,
+      "max": 143,
+      "mean": 3.958643674850464
+    }
+  },
+  "content": {
+    "lnc_ortho": "re-indexed by name from data_rd/lnc_ortho.npy (702d RNA-FM+struct+expr)",
+    "disease_emb": "produced by embed_disease.py (S-BioBERT 768d) on disease_texts.json"
+  }
+}
