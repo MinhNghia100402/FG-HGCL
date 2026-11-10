@@ -5,13 +5,20 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 
-# Private: thesis report, defense deck, research notes / conclusions, experiment results (kept locally only)
+# Private: report, slides, research notes (kept locally only)
 report/
 presentation/
 docs/
-results/
 CLAUDE.md
-FG_HGCL_both_cold_research_plan.md
+
+# Markdown: only the README is published
+*.md
+!/README.md
+
+# Results: only the JSON summaries are published (no logs, dumps, score arrays)
+results/**
+!results/**/
+!results/**/*.json
 
 # Data: published (harness inputs, split manifests, cross-dataset maps) except unused large features
 data/harness/data_rd_l2d5/lnc_ortho_rs10k15.npy
