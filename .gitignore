@@ -10,6 +10,7 @@ report/
 presentation/
 docs/
 CLAUDE.md
+legacy/
 
 # Markdown: only the README is published
 *.md
