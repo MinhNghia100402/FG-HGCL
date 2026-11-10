@@ -1,0 +1,331 @@
+{
+ "dataset": "D2",
+ "epochs": 420,
+ "n_candidates": 141303,
+ "n_evidence": 2247,
+ "base_rate": 0.015901997834440882,
+ "methods": {
+  "FG-HGCL": {
+   "auc": 0.886014804663931,
+   "ap": 0.12107626548991782,
+   "p@20": 0.35,
+   "p@50": 0.3,
+   "p@100": 0.31,
+   "p@200": 0.225,
+   "macro_auc_dis": 0.8270040856369226,
+   "macro_p@10_dis": 0.16979865771812083,
+   "n_dis": 149
+  },
+  "FG-HGCL-HG": {
+   "auc": 0.8799906030500684,
+   "ap": 0.13091159596953483,
+   "p@20": 0.75,
+   "p@50": 0.4,
+   "p@100": 0.28,
+   "p@200": 0.25,
+   "macro_auc_dis": 0.8256939132542797,
+   "macro_p@10_dis": 0.16308724832214766,
+   "n_dis": 149
+  },
+  "Popularity": {
+   "auc": 0.884675340206098,
+   "ap": 0.11884025211090492,
+   "p@20": 0.2,
+   "p@50": 0.14,
+   "p@100": 0.12,
+   "p@200": 0.11,
+   "macro_auc_dis": 0.8353285070044828,
+   "macro_p@10_dis": 0.17516778523489934,
+   "n_dis": 149
+  }
+ },
+ "cases": [
+  {
+   "disease": "Esophageal Squamous Cell Carcinoma",
+   "known": 89,
+   "v3_only": 187,
+   "top10": [
+    {
+     "lnc": "CRNDE",
+     "rank": 1,
+     "score": 0.9977,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "LINC00511",
+     "rank": 2,
+     "score": 0.9929,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "LINC00958",
+     "rank": 3,
+     "score": 0.9913,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "HULC",
+     "rank": 4,
+     "score": 0.9909,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "FENDRR",
+     "rank": 5,
+     "score": 0.9884,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "HOXA-AS2",
+     "rank": 6,
+     "score": 0.9882,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "HOTAIRM1",
+     "rank": 7,
+     "score": 0.9854,
+     "in_v3": true,
+     "pmid": [
+      "29604464"
+     ]
+    },
+    {
+     "lnc": "MIR31HG",
+     "rank": 8,
+     "score": 0.9844,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "RMRP",
+     "rank": 9,
+     "score": 0.9795,
+     "in_v3": true,
+     "pmid": [
+      "34516335"
+     ]
+    },
+    {
+     "lnc": "HAGLR",
+     "rank": 10,
+     "score": 0.9781,
+     "in_v3": true,
+     "pmid": [
+      "29604464"
+     ]
+    }
+   ]
+  },
+  {
+   "disease": "Squamous Cell Carcinoma of Head and Neck",
+   "known": 29,
+   "v3_only": 113,
+   "top10": [
+    {
+     "lnc": "UCA1",
+     "rank": 1,
+     "score": 0.9978,
+     "in_v3": true,
+     "pmid": [
+      "30679991",
+      "32130788",
+      "33384238"
+     ]
+    },
+    {
+     "lnc": "GAS5",
+     "rank": 2,
+     "score": 0.996,
+     "in_v3": true,
+     "pmid": [
+      "30576678",
+      "31572003",
+      "33551645"
+     ]
+    },
+    {
+     "lnc": "XIST",
+     "rank": 3,
+     "score": 0.9891,
+     "in_v3": true,
+     "pmid": [
+      "31071316",
+      "33191714",
+      "34640640"
+     ]
+    },
+    {
+     "lnc": "CRNDE",
+     "rank": 4,
+     "score": 0.9873,
+     "in_v3": true,
+     "pmid": [
+      "30867767",
+      "34729919"
+     ]
+    },
+    {
+     "lnc": "LINC-ROR",
+     "rank": 5,
+     "score": 0.9858,
+     "in_v3": true,
+     "pmid": [
+      "35461069"
+     ]
+    },
+    {
+     "lnc": "NEAT1",
+     "rank": 6,
+     "score": 0.9848,
+     "in_v3": true,
+     "pmid": [
+      "30186464",
+      "33023572",
+      "33384238"
+     ]
+    },
+    {
+     "lnc": "CCAT2",
+     "rank": 7,
+     "score": 0.9785,
+     "in_v3": true,
+     "pmid": [
+      "34515990"
+     ]
+    },
+    {
+     "lnc": "BANCR",
+     "rank": 8,
+     "score": 0.9723,
+     "in_v3": true,
+     "pmid": [
+      "31654433",
+      "31798630"
+     ]
+    },
+    {
+     "lnc": "SNHG16",
+     "rank": 9,
+     "score": 0.9676,
+     "in_v3": true,
+     "pmid": [
+      "30607006",
+      "32547087",
+      "33654431"
+     ]
+    },
+    {
+     "lnc": "AFAP1-AS1",
+     "rank": 10,
+     "score": 0.9642,
+     "in_v3": true,
+     "pmid": [
+      "31875436",
+      "34703311"
+     ]
+    }
+   ]
+  },
+  {
+   "disease": "Carcinoma, Hepatocellular",
+   "known": 273,
+   "v3_only": 111,
+   "top10": [
+    {
+     "lnc": "HIF1A-AS1",
+     "rank": 1,
+     "score": 0.9963,
+     "in_v3": true,
+     "pmid": [
+      "32473641"
+     ]
+    },
+    {
+     "lnc": "HCP5",
+     "rank": 2,
+     "score": 0.9959,
+     "in_v3": true,
+     "pmid": [
+      "34148029"
+     ]
+    },
+    {
+     "lnc": "BCAR4",
+     "rank": 3,
+     "score": 0.9951,
+     "in_v3": true,
+     "pmid": [
+      "30423146",
+      "34150042"
+     ]
+    },
+    {
+     "lnc": "EPB41L4A-AS1",
+     "rank": 4,
+     "score": 0.9945,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "LOXL1-AS1",
+     "rank": 5,
+     "score": 0.9945,
+     "in_v3": true,
+     "pmid": [
+      "34863279"
+     ]
+    },
+    {
+     "lnc": "LINC-PINT",
+     "rank": 6,
+     "score": 0.9934,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "SNHG17",
+     "rank": 7,
+     "score": 0.9931,
+     "in_v3": true,
+     "pmid": [
+      "33519911",
+      "34227089",
+      "34557456"
+     ]
+    },
+    {
+     "lnc": "MIR17HG",
+     "rank": 8,
+     "score": 0.993,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "LINC01116",
+     "rank": 9,
+     "score": 0.9925,
+     "in_v3": true,
+     "pmid": [
+      "35148283"
+     ]
+    },
+    {
+     "lnc": "SNHG4",
+     "rank": 10,
+     "score": 0.9921,
+     "in_v3": true,
+     "pmid": [
+      "36565037"
+     ]
+    }
+   ]
+  }
+ ]
+}

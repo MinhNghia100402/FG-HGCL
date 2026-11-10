@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "source_data_sha256": "e9713a1a6d8b3ff7bce959d2395433d46fe4794dcdae38f4d375546e7909bb4f",
+  "fold_metric_records": 1000,
+  "models": 10,
+  "protocols": 4,
+  "seeds": 5,
+  "folds": 5,
+  "aggregate_metric_rows": 640,
+  "maximum_absolute_error": 2.220446049250313e-16,
+  "aggregation": "mean of five fold metrics within seed; mean and sample SD (ddof=1) across five seeds",
+  "training_performed": false,
+  "predictions_recomputed": false,
+  "scope": "Numeric table replay from historical fold-level metric aggregates",
+  "separate_node_control_fold_records": 100,
+  "node_control_source_sha256": "b40fbcd83559bca2e82f1c80f3cf8f30ddb9bdc1d30281ae64981c1b6b7e527f"
+}

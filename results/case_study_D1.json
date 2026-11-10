@@ -1,0 +1,311 @@
+{
+ "dataset": "D1",
+ "epochs": 130,
+ "n_candidates": 58060,
+ "n_evidence": 1733,
+ "base_rate": 0.029848432655873235,
+ "methods": {
+  "FG-HGCL": {
+   "auc": 0.8716833309445193,
+   "ap": 0.21873248510656543,
+   "p@20": 0.65,
+   "p@50": 0.66,
+   "p@100": 0.5,
+   "p@200": 0.49,
+   "macro_auc_dis": 0.7966622943885617,
+   "macro_p@10_dis": 0.2023622047244095,
+   "n_dis": 127
+  },
+  "FG-HGCL-HG": {
+   "auc": 0.8632604082104813,
+   "ap": 0.21605123441565713,
+   "p@20": 0.65,
+   "p@50": 0.6,
+   "p@100": 0.49,
+   "p@200": 0.455,
+   "macro_auc_dis": 0.7881458296825533,
+   "macro_p@10_dis": 0.20157480314960638,
+   "n_dis": 127
+  },
+  "Popularity": {
+   "auc": 0.87190927029621,
+   "ap": 0.21008443741767016,
+   "p@20": 0.6,
+   "p@50": 0.52,
+   "p@100": 0.53,
+   "p@200": 0.44,
+   "macro_auc_dis": 0.8036287284175861,
+   "macro_p@10_dis": 0.21574803149606303,
+   "n_dis": 127
+  }
+ },
+ "cases": [
+  {
+   "disease": "Esophageal Squamous Cell Carcinoma",
+   "known": 100,
+   "v3_only": 89,
+   "top10": [
+    {
+     "lnc": "XIST",
+     "rank": 1,
+     "score": 0.9997,
+     "in_v3": true,
+     "pmid": [
+      "29604464",
+      "33345719"
+     ]
+    },
+    {
+     "lnc": "CRNDE",
+     "rank": 2,
+     "score": 0.9997,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "HULC",
+     "rank": 3,
+     "score": 0.9996,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "PCAT1",
+     "rank": 4,
+     "score": 0.9995,
+     "in_v3": true,
+     "pmid": [
+      "31273188",
+      "31920393"
+     ]
+    },
+    {
+     "lnc": "CDKN2BAS",
+     "rank": 5,
+     "score": 0.9995,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "CUDR",
+     "rank": 6,
+     "score": 0.9994,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "BLACAT1",
+     "rank": 7,
+     "score": 0.9994,
+     "in_v3": true,
+     "pmid": [
+      "29604464"
+     ]
+    },
+    {
+     "lnc": "KCNQ1OT1",
+     "rank": 8,
+     "score": 0.9993,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "LINC00511",
+     "rank": 9,
+     "score": 0.9993,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "SNHG7",
+     "rank": 10,
+     "score": 0.9993,
+     "in_v3": false,
+     "pmid": []
+    }
+   ]
+  },
+  {
+   "disease": "Squamous Cell Carcinoma of Head and Neck",
+   "known": 86,
+   "v3_only": 71,
+   "top10": [
+    {
+     "lnc": "DLX6-AS1",
+     "rank": 1,
+     "score": 0.9996,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "XIST",
+     "rank": 2,
+     "score": 0.9996,
+     "in_v3": true,
+     "pmid": [
+      "31071316",
+      "33191714",
+      "34640640"
+     ]
+    },
+    {
+     "lnc": "CDKN2BAS",
+     "rank": 3,
+     "score": 0.9996,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "CRNDE",
+     "rank": 4,
+     "score": 0.9996,
+     "in_v3": true,
+     "pmid": [
+      "30867767",
+      "34729919"
+     ]
+    },
+    {
+     "lnc": "SNHG1",
+     "rank": 5,
+     "score": 0.9995,
+     "in_v3": true,
+     "pmid": [
+      "33376352",
+      "33872442"
+     ]
+    },
+    {
+     "lnc": "MIAT",
+     "rank": 6,
+     "score": 0.9994,
+     "in_v3": true,
+     "pmid": [
+      "33603840"
+     ]
+    },
+    {
+     "lnc": "SNHG6",
+     "rank": 7,
+     "score": 0.9993,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "lncRNA-ATB",
+     "rank": 8,
+     "score": 0.9993,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "DANCR",
+     "rank": 9,
+     "score": 0.9992,
+     "in_v3": true,
+     "pmid": [
+      "32860589"
+     ]
+    },
+    {
+     "lnc": "ANCR",
+     "rank": 10,
+     "score": 0.9991,
+     "in_v3": false,
+     "pmid": []
+    }
+   ]
+  },
+  {
+   "disease": "Colorectal Neoplasms",
+   "known": 253,
+   "v3_only": 62,
+   "top10": [
+    {
+     "lnc": "CDKN2BAS",
+     "rank": 1,
+     "score": 0.9999,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "SNHG8",
+     "rank": 2,
+     "score": 0.9999,
+     "in_v3": true,
+     "pmid": [
+      "34122628"
+     ]
+    },
+    {
+     "lnc": "CUDR",
+     "rank": 3,
+     "score": 0.9999,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "FER1L4",
+     "rank": 4,
+     "score": 0.9998,
+     "in_v3": true,
+     "pmid": [
+      "34132945",
+      "35198876"
+     ]
+    },
+    {
+     "lnc": "CASC15",
+     "rank": 5,
+     "score": 0.9997,
+     "in_v3": true,
+     "pmid": [
+      "33395735"
+     ]
+    },
+    {
+     "lnc": "FALEC",
+     "rank": 6,
+     "score": 0.9997,
+     "in_v3": true,
+     "pmid": [
+      "30267804",
+      "33073675"
+     ]
+    },
+    {
+     "lnc": "BC200",
+     "rank": 7,
+     "score": 0.9997,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "CARLo-5",
+     "rank": 8,
+     "score": 0.9997,
+     "in_v3": false,
+     "pmid": []
+    },
+    {
+     "lnc": "LINC00339",
+     "rank": 9,
+     "score": 0.9997,
+     "in_v3": true,
+     "pmid": [
+      "31269584"
+     ]
+    },
+    {
+     "lnc": "LINC00958",
+     "rank": 10,
+     "score": 0.9997,
+     "in_v3": true,
+     "pmid": [
+      "34672237"
+     ]
+    }
+   ]
+  }
+ ]
+}
