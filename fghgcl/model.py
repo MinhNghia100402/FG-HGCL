@@ -16,6 +16,9 @@ Ablation IDs of the research plan map to config flags:
                          hypergraph layer acts on the 256-d hidden layer of its own tower over the raw content);
                          hg_zscore = z-score the hypergraph branch input with train-node statistics (v22).
                          fusion = "g" scores with g only (v22: no separate feature MLP in the score).
+  Hypergraph signal    : hg_signal = "tower" (HGCN on h, default) | "links" (docs/collab_hypergraph_d12.md: the content
+                         hyperedges carry the neighbours' TRAIN link profiles, g = MLP(G0 Y), G0 = propagator without
+                         self loops, row-normalised, so a node's own labels never enter its hypergraph view).
   Decoder              : decoder = "dot" (CDELDA, default) | "bilinear" (z_l^T W z_d, W initialised to I; separate ablation).
   C2  association view : lam_assoc > 0. Association hypergraph from TRAIN edges only (each train disease = a hyperedge
                          over its train lncRNAs and the dual); a 2-step HGNN on free node embeddings (= 2-layer LightGCN,
@@ -48,11 +51,14 @@ class Config:
     hg_layers: int = 1
     hg_place: str = "post"          # post | inner
     hg_zscore: bool = False
+    hg_signal: str = "tower"        # tower | links (collaborative signal on content hyperedges)
     protocol: str = "A"             # A = strict inductive, B = feature-transductive
     fusion: str = "residual"        # residual | gated | concat
     lam_cl: float = 0.0
     lam_assoc: float = 0.0          # C2: weight of feature <-> association-hypergraph InfoNCE
     assoc_bce: bool = True          # C2: the association view is also trained with the link loss on train pairs
+    assoc_fuse: bool = False        # warm only: score with LayerNorm(z + a) (association-hypergraph embedding fused in);
+                                    # the InfoNCE still contrasts the pre-fusion z with a
     aug: str = "none"               # B9: none | uniform | sim (similarity-guided hyperedge-membership dropout)
     aug_p: float = 0.2              # B9: mean drop probability of a membership
     decoder: str = "dot"            # dot | bilinear
@@ -68,6 +74,9 @@ class Config:
     dis_views: tuple = ()           # direction 1: extra KNN disease hyperedges from frozen-S-BioBERT text views
                                     # (subset of name / defn / syn; data/harness/data_rd_<v>/disease_views.npz)
     dis_view_feats: bool = False    # direction 1: the text views are also appended to the disease tower input
+    kg_lnc: tuple = ()              # label-free knowledge hyperedges added to the lncRNA hypergraph (subset of mirna / locus;
+                                    # data/harness/data_rd_<v>/kg_lnc.npz, scripts/build_kg_views.py)
+    kg_dis: tuple = ()              # same for diseases (onto = MeSH tree term and its descendants; kg_dis.npz)
     extra_src: tuple = ()           # extra D3 train labels from D1 / D2 (data/cross; added inside the train block only)
     link_loss: str = "bce"          # bce (CDELDA) | infonce | infonce+bce: association objective
     link_k: int = 64                # infonce: sampled negatives per positive and direction (known positives masked)
@@ -149,12 +158,14 @@ def info_nce(a, b, tau):
 class Side(nn.Module):
     """One entity type: feature tower, optional hypergraph encoder, fusion, projection heads."""
 
-    def __init__(self, d_in, cfg: Config, use_hg: bool):
+    def __init__(self, d_in, cfg: Config, use_hg: bool, d_sig: int = 0):
         super().__init__()
         self.tower = mlp(d_in, cfg.hidden, cfg.m, cfg.drop)
-        self.use_hg, self.inner = use_hg, cfg.hg_place == "inner"
+        self.use_hg, self.inner, self.links = use_hg, cfg.hg_place == "inner", cfg.hg_signal == "links"
         if use_hg:
-            if self.inner:
+            if self.links:
+                self.hgs = mlp(d_sig, cfg.hidden, cfg.m, cfg.drop)
+            elif self.inner:
                 self.hgt = HGTower(d_in, cfg.hidden, cfg.m, cfg.hg_layers, cfg.drop)
             else:
                 self.hg = HGEncoder(cfg.m, cfg.hg_layers)
@@ -167,6 +178,8 @@ class Side(nn.Module):
             self.qa = nn.Sequential(nn.Linear(cfg.m, cfg.m), nn.ReLU(), nn.Linear(cfg.m, cfg.m))
 
     def encode_g(self, h, xz, G):
+        if self.links:                                   # G is the propagated link profile c = G0 Y
+            return self.hgs(G)
         return self.hgt(xz, G) if self.inner else self.hg(h, G)
 
     def forward(self, x, G, xz=None):
@@ -177,8 +190,10 @@ class Side(nn.Module):
         return self.fuse(h, g), h, g
 
 
-def side_structure(X, sim_list, has, pool, cfg: Config, k: int, g: int, seed: int):
-    """Incidence blocks of the requested views + the propagator for the chosen protocol (numpy)."""
+def side_structure(X, sim_list, has, pool, cfg: Config, k: int, g: int, seed: int, extra=None):
+    """Incidence blocks of the requested views + the propagator for the chosen protocol (numpy).
+    extra: optional label-free incidence block (N x E) of knowledge hyperedges; like GMM components, every column is
+    usable, and Protocol A restricts it to pool members for pool rows."""
     Hs, ok, keep = [], [], []
     N = X.shape[0]
     if "knn" in cfg.views:
@@ -191,6 +206,10 @@ def side_structure(X, sim_list, has, pool, cfg: Config, k: int, g: int, seed: in
         Hs.append(Hg)
         ok.append(np.ones(Hg.shape[1], bool))
         keep.append(np.zeros(Hg.shape, bool))
+    if extra is not None and extra.shape[1]:
+        Hs.append(extra.astype(np.float32))
+        ok.append(np.ones(extra.shape[1], bool))
+        keep.append(np.zeros(extra.shape, bool))
     if not Hs:
         return None, None
     H, col_ok, K = np.concatenate(Hs, 1), np.concatenate(ok), np.concatenate(keep, 1)
@@ -215,6 +234,15 @@ def side_structure(X, sim_list, has, pool, cfg: Config, k: int, g: int, seed: in
     return G, aug
 
 
+def link_signal(G, Y):
+    """c = G0 Y: G without self loops, rows renormalised to sum 1 (rows with no neighbour stay 0)."""
+    G0 = np.array(G, np.float64, copy=True)
+    np.fill_diagonal(G0, 0.0)
+    rs = G0.sum(1, keepdims=True)
+    G0 = np.where(rs > 0, G0 / np.maximum(rs, 1e-12), 0.0)
+    return (G0 @ Y).astype(np.float32)
+
+
 def propagator_t(H):
     dv, de = H.sum(1), H.sum(0)
     dvi = torch.where(dv > 0, dv.clamp_min(1e-12).rsqrt(), torch.zeros_like(dv))
@@ -227,12 +255,14 @@ class AssocHypergraph(nn.Module):
     """Association hypergraph view on train edges only: a = mean(e, P e, P^2 e), P = sym-normalised bipartite
     adjacency of the train block (2-step HGNN on the association hypergraph and its dual)."""
 
-    def __init__(self, Mtr: np.ndarray, m: int, device):
+    def __init__(self, Mtr: np.ndarray, m: int, device, fuse: bool = False):
         super().__init__()
         L, D = Mtr.shape
         self.L = L
         self.emb = nn.Embedding(L + D, m)
         nn.init.normal_(self.emb.weight, std=0.1)
+        if fuse:
+            self.norm_l, self.norm_d = nn.LayerNorm(m), nn.LayerNorm(m)
         e = np.argwhere(Mtr)
         A = np.zeros((L + D, L + D), np.float32)
         A[e[:, 0], L + e[:, 1]] = A[L + e[:, 1], e[:, 0]] = 1.0
@@ -261,6 +291,17 @@ def load_dis_views(names, n_dis):
     return out
 
 
+def load_kg(side, srcs, n):
+    """Knowledge-hyperedge incidence of the current harness variant restricted to the sources in `srcs` (None if empty)."""
+    if not srcs:
+        return None
+    import os
+    z = np.load(os.path.join(os.path.dirname(os.environ["CCDIFF_DIS_SEMSIM"]), f"kg_{side}.npz"))
+    H = z["H"][:, np.isin(z["src"], list(srcs))].astype(np.float32)
+    assert len(H) == n and H.shape[1] > 0, (side, srcs, H.shape)
+    return H
+
+
 def extra_labels(srcs, shape):
     """D1 / D2 positives mapped onto D3 pairs (scripts/cross_dataset_map.py); only defined for l2d5."""
     from pathlib import Path
@@ -285,12 +326,12 @@ class FGHGCL:
         if self._leak is not None:                       # HGCMLDA protocol: hypergraphs on IL / ID over every node
             IL, ID = self._leak
             allL, allD = np.ones(len(IL), bool), np.ones(len(ID), bool)
-            Gl, self._aug_l = side_structure(IL, [IL], allL, allL, c, c.k_lnc, c.g_lnc, c.seed)
-            Gd, self._aug_d = side_structure(ID, [ID], allD, allD, c, c.k_dis, c.g_dis, c.seed)
+            Gl, self._aug_l = side_structure(IL, [IL], allL, allL, c, c.k_lnc, c.g_lnc, c.seed, self._kg_l)
+            Gd, self._aug_d = side_structure(ID, [ID], allD, allD, c, c.k_dis, c.g_dis, c.seed, self._kg_d)
             return Gl, Gd
-        Gl, self._aug_l = side_structure(Xl, [cosine(Xl)], has_l, ml, c, c.k_lnc, c.g_lnc, c.seed)
+        Gl, self._aug_l = side_structure(Xl, [cosine(Xl)], has_l, ml, c, c.k_lnc, c.g_lnc, c.seed, self._kg_l)
         sims_d = [s for s in (dss, cosine(Xd)) if s is not None] + [cosine(v) for v in self._views]
-        Gd, self._aug_d = side_structure(Xd, sims_d, np.ones(len(Xd), bool), md, c, c.k_dis, c.g_dis, c.seed)
+        Gd, self._aug_d = side_structure(Xd, sims_d, np.ones(len(Xd), bool), md, c, c.k_dis, c.g_dis, c.seed, self._kg_d)
         return Gl, Gd
 
     def fit(self, M, Xl, Xd, dss, ml, md, epochs=None, val=None, leak_sims=None, train_mask=None):
@@ -303,6 +344,7 @@ class FGHGCL:
         self._leak = leak_sims
         self._d_base = Xd.shape[1]
         self._views = load_dis_views(c.dis_views, len(Xd))
+        self._kg_l, self._kg_d = load_kg("lnc", c.kg_lnc, len(Xl)), load_kg("dis", c.kg_dis, len(Xd))
         if c.dis_view_feats and self._views:
             Xd = np.concatenate([Xd] + self._views, 1).astype(np.float32)
         if c.extra_src:                                  # extra positives, restricted to the train block (ml x md)
@@ -313,6 +355,13 @@ class FGHGCL:
         has_l = np.any(Xl != 0, axis=1)
         Gl, Gd = self._structures(Xl, Xd, dss, has_l, ml, md)
         use_hg = bool(c.views)
+        if c.hg_signal not in ("tower", "links"):
+            raise ValueError(c.hg_signal)
+        if use_hg and c.hg_signal == "links":            # replace each propagator by the neighbours' train link profiles
+            Ytr = np.zeros(M.shape, np.float32)
+            Ytr[np.ix_(ml, md)] = M[np.ix_(ml, md)] > 0
+            Gl, Gd = link_signal(Gl, Ytr), link_signal(Gd, Ytr.T)
+            self._aug_l = self._aug_d = None
         self.xl, self.xd = torch.tensor(Xl, device=dev), torch.tensor(Xd, device=dev)
         self.Gl = torch.tensor(Gl, device=dev) if Gl is not None else None
         self.Gd = torch.tensor(Gd, device=dev) if Gd is not None else None
@@ -323,8 +372,9 @@ class FGHGCL:
                 return torch.tensor(((X - mu) / sd * has[:, None]).astype(np.float32), device=dev)
             self.xlz = zs(Xl, ml, has_l)
             self.xdz = zs(Xd, md, np.ones(len(Xd), bool))
-        self.L = Side(Xl.shape[1], c, use_hg).to(dev)
-        self.D = Side(Xd.shape[1], c, use_hg).to(dev)
+        d_sig = c.hg_signal == "links"
+        self.L = Side(Xl.shape[1], c, use_hg, M.shape[1] if d_sig else 0).to(dev)
+        self.D = Side(Xd.shape[1], c, use_hg, M.shape[0] if d_sig else 0).to(dev)
         it = torch.as_tensor(np.nonzero(ml)[0], device=dev)
         jt = torch.as_tensor(np.nonzero(md)[0], device=dev)
         Y = torch.tensor((M[np.ix_(ml, md)] > 0).astype(np.float32), device=dev)
@@ -352,14 +402,14 @@ class FGHGCL:
         elif c.decoder != "dot":
             raise ValueError(c.decoder)
         augs = {}
-        if use_hg and c.aug != "none" and c.lam_cl > 0:
+        if use_hg and c.aug != "none" and c.lam_cl > 0 and c.hg_signal == "tower":
             for k_, a_ in (("l", self._aug_l), ("d", self._aug_d)):
                 augs[k_] = tuple(torch.tensor(x, device=dev) for x in a_)
         self.A = None
-        if c.lam_assoc > 0:
+        if c.lam_assoc > 0 or c.assoc_fuse:               # assoc_fuse with lam_assoc = 0: control without the contrast
             Mtr = np.zeros(M.shape, bool)
             Mtr[np.ix_(ml, md)] = M[np.ix_(ml, md)] > 0
-            self.A = AssocHypergraph(Mtr, c.m, dev).to(dev)
+            self.A = AssocHypergraph(Mtr, c.m, dev, c.assoc_fuse).to(dev)
             params += list(self.A.parameters())
         opt = torch.optim.Adam(params, lr=c.lr, weight_decay=c.wd)
         hist, self.loss_log = [], []
@@ -369,12 +419,17 @@ class FGHGCL:
             opt.zero_grad()
             zl, hl, gl = self.L(self.xl, self.Gl, self.xlz)
             zd, hd, gd = self.D(self.xd, self.Gd, self.xdz)
+            sl, sd = zl, zd                              # embeddings that are scored
+            if self.A is not None:
+                al, ad = self.A()
+                if c.assoc_fuse:
+                    sl, sd = self.A.norm_l(zl + al), self.A.norm_d(zd + ad)
             if c.link_loss == "bce":
-                la = bce(self._dec(zl[it], zd[jt]), Y)
+                la = bce(self._dec(sl[it], sd[jt]), Y)
             else:
-                la = self._infonce(zl[it], zd[jt], pos, neg_ok)
+                la = self._infonce(sl[it], sd[jt], pos, neg_ok)
                 if c.link_loss == "infonce+bce":
-                    la = la + bce(self._dec(zl[it], zd[jt]), Y)
+                    la = la + bce(self._dec(sl[it], sd[jt]), Y)
             loss, lc = la, torch.zeros((), device=dev)
             if use_hg and c.lam_cl > 0:
                 for k_, side, h, g, idx, xz in (("l", self.L, hl, gl, it, self.xlz), ("d", self.D, hd, gd, jt, self.xdz)):
@@ -385,15 +440,15 @@ class FGHGCL:
                     lc = lc + 0.5 * info_nce(side.qh(h[sub]), side.qg(g[sub]), c.tau)
                 loss = la + c.lam_cl * lc
             if self.A is not None:
-                al, ad = self.A()
                 if c.assoc_bce:
                     loss = loss + bce(al[it] @ ad[jt].T, Y)
-                lx = torch.zeros((), device=dev)
-                for side, z, a, idx in ((self.L, zl, al, self.A.has_l), (self.D, zd, ad, self.A.has_d)):
-                    sub = idx[torch.randperm(len(idx), device=dev)[:c.cl_batch]]
-                    lx = lx + 0.5 * info_nce(side.qz(z[sub]), side.qa(a[sub]), c.tau)
-                loss = loss + c.lam_assoc * lx
-                lc = lc + lx.detach()
+                if c.lam_assoc > 0:
+                    lx = torch.zeros((), device=dev)
+                    for side, z, a, idx in ((self.L, zl, al, self.A.has_l), (self.D, zd, ad, self.A.has_d)):
+                        sub = idx[torch.randperm(len(idx), device=dev)[:c.cl_batch]]
+                        lx = lx + 0.5 * info_nce(side.qz(z[sub]), side.qa(a[sub]), c.tau)
+                    loss = loss + c.lam_assoc * lx
+                    lc = lc + lx.detach()
             loss.backward()
             opt.step()
             if ep % c.eval_every == 0:
@@ -408,6 +463,9 @@ class FGHGCL:
         self.D.eval()
         zl, hl, gl = self.L(self.xl, self.Gl, self.xlz)
         zd, hd, gd = self.D(self.xd, self.Gd, self.xdz)
+        if self.A is not None and self.cfg.assoc_fuse:
+            al, ad = self.A()
+            zl, zd = self.A.norm_l(zl + al), self.A.norm_d(zd + ad)
         return {"zl": zl, "zd": zd, "hl": hl, "hd": hd, "gl": gl, "gd": gd}
 
     def scores(self) -> np.ndarray:

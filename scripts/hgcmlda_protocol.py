@@ -4,8 +4,11 @@ with the HGCMLDA paper and its reproduction in /sda1/nghiavm/research/HGCMLDA (r
 Protocol (original/Dataset*/prepareData.py + main_experiments.py, splits read from the reproduction's split.npz):
   - an independent test set (positives + negatives) is held out; the remaining positives and zeros are cut into 5 folds;
   - fold k trains on the ones / zeros of the other folds (independent pairs never used), warm start (every node seen);
-  - evaluation 1:1: fold-k test positives vs the first n_pos test zeros after np.random.seed(3) + shuffle, then the
-    independent positives vs shuffled independent negatives (same RNG stream, as in the original);
+  - evaluation 1:1: fold-k test positives vs the first n_pos test zeros after np.random.seed(s) + shuffle, then the
+    independent positives vs shuffled independent negatives (same RNG stream, as in the original). The original uses
+    s = 3 in Dataset1 and s = 4 in Dataset2 (original/Dataset2/main_experiments.py:78); this script used s = 3 for both
+    until 2026-11-05 (found by the score-agreement check of scripts/analysis_report.py), so D2 results with the default
+    are on a different 1:1 negative sample of the same pool; --neg_seed 4 reproduces Dataset2's exact negatives.
   - metrics: paper-style (mean interpolated ROC AUC, pooled trapezoidal AUPR; HGCMLDA src/eval/metrics.py) + fold means.
 Variants:
   clean : FG-HGCL on content features (no association-derived input)
@@ -67,21 +70,26 @@ def main():
     ap.add_argument("--epochs", type=int, default=500)
     ap.add_argument("--cfg", default="{}", help="JSON overrides on top of --model (selection candidates)")
     ap.add_argument("--tag", default="", help="suffix of the result file")
+    ap.add_argument("--split", default=None, help="split.npz of another HGCMLDA run (default: the reproduction split)")
+    ap.add_argument("--neg_seed", type=int, default=3, help="np.random seed of the 1:1 test negatives (original: 3 for D1, 4 for D2)")
+    ap.add_argument("--dump", action="store_true", help="also save test pairs, scores and inner-val curves (results/hgcmlda_protocol/dump/)")
     a = ap.parse_args()
     from run_ablation import config
     M, Xl, Xd = load_variant(f"D{a.dataset}")
     dss = load_semsim()
-    sp = np.load(SPLITS[a.dataset])
+    split = Path(a.split) if a.split else SPLITS[a.dataset]
+    sp = np.load(split)
     L, D = M.shape
     ind_pos, ind_neg = mask_of(sp["ind_pos"], M.shape), mask_of(sp["ind_neg"], M.shape)
     zeros_cv = ~M & ~ind_neg
     leak = leaky_similarities(M, dss) if a.variant == "leaky" else None   # prepareData.py: IL / ID from ld_true
     allL, allD = np.ones(L, bool), np.ones(D, bool)
-    out = {"dataset": a.dataset, "variant": a.variant, "model": a.model, "cfg_over": json.loads(a.cfg), "tag": a.tag, "split": str(SPLITS[a.dataset]), "seeds": {}}
+    out = {"neg_seed": a.neg_seed, "dataset": a.dataset, "variant": a.variant, "model": a.model, "cfg_over": json.loads(a.cfg), "tag": a.tag, "split": str(split), "seeds": {}}
     for seed in a.seeds:
         cfg, Model = build({**config(a.model), "epochs": a.epochs, "eval_every": 10, "seed": seed, **json.loads(a.cfg)})
         ys, ps, yi, pi, folds, t0 = [], [], [], [], [], time.time()
-        np.random.seed(3)                                 # the original seeds once per fold inside evaluate_validation
+        dump = {}
+        np.random.seed(a.neg_seed)                        # the original seeds once per fold inside evaluate_validation
         for k in range(5):
             tpos, tneg = sp[f"fold{k}_test_pos"], sp[f"fold{k}_test_neg"]
             train_ones = M & ~mask_of(tpos, M.shape) & ~ind_pos
@@ -106,7 +114,7 @@ def main():
                 m.fit(train_ones, Xl, Xd, dss, allL, allD, epochs=ep, leak_sims=leak, train_mask=train_ones | train_zeros)
                 S = S + 1.0 / (1.0 + np.exp(-np.clip(m.scores(), -50, 50))) / getattr(cfg, "ens", 1)
             # evaluation exactly as main_experiments.evaluate_validation / evaluate_test
-            np.random.seed(3)
+            np.random.seed(a.neg_seed)
             idx = np.arange(len(tneg)).reshape(1, -1)
             np.random.shuffle(idx.T)
             neg = tneg[idx[0, :len(tpos)]]
@@ -118,6 +126,10 @@ def main():
             y2 = np.r_[np.ones(len(sp["ind_pos"])), np.zeros(len(ineg))]
             p2 = np.r_[S[sp["ind_pos"][:, 0], sp["ind_pos"][:, 1]], S[ineg[:, 0], ineg[:, 1]]]
             ys.append(y), ps.append(p), yi.append(y2), pi.append(p2)
+            if a.dump:
+                dump.update({f"f{k}_cv_pairs": np.r_[tpos, neg], f"f{k}_cv_y": y, f"f{k}_cv_p": p,
+                             f"f{k}_ind_pairs": np.r_[sp["ind_pos"], ineg], f"f{k}_ind_y": y2, f"f{k}_ind_p": p2,
+                             f"f{k}_train_ones": np.argwhere(train_ones), f"f{k}_hist": np.array(hist, float)})
             folds.append({"epoch": int(ep), "inner_val_ap": float(vbest), "cv_auc": float(roc_auc_score(y, p)), "cv_ap": float(average_precision_score(y, p)),
                           "ind_auc": float(roc_auc_score(y2, p2)), "ind_ap": float(average_precision_score(y2, p2))})
             print(f"[D{a.dataset} {a.variant} {a.model} s{seed}] fold {k}: ep {ep} CV AUC {folds[-1]['cv_auc']:.4f} "
@@ -125,6 +137,10 @@ def main():
         r = {"cv": paper_style(ys, ps), "independent": paper_style(yi, pi), "folds": folds, "seconds": round(time.time() - t0),
              "inner_val_ap": float(np.mean([f["inner_val_ap"] for f in folds]))}
         out["seeds"][str(seed)] = r
+        if a.dump:
+            d = ROOT / "results" / "hgcmlda_protocol" / "dump"
+            d.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(d / f"D{a.dataset}_{a.variant}_{a.model}{('_' + a.tag) if a.tag else ''}_s{seed}.npz", **dump)
         print(f"== D{a.dataset} {a.variant} {a.model}{a.tag} s{seed}: innerval {r['inner_val_ap']:.4f} | CV AUC {r['cv']['auc']:.4f} AUPR {r['cv']['aupr']:.4f} | "
               f"independent AUC {r['independent']['auc']:.4f} AUPR {r['independent']['aupr']:.4f}", flush=True)
     for part in ("cv", "independent"):

@@ -46,7 +46,11 @@ def test_inductive_pool_rows_ignore_non_pool():
                                                    (("knn",), 0.0, 0.5, {"hg_place": "inner", "hg_zscore": True, "fusion": "g"}),
                                                    (("knn", "gmm"), 0.5, 0.0, {"hg_place": "inner", "hg_zscore": True, "fusion": "gated", "aug": "sim"}),
                                                    (("knn", "gmm"), 0.5, 0.0, {"link_loss": "infonce", "link_k": 8}),
-                                                   ((), 0.0, 0.0, {"link_loss": "infonce+bce", "link_k": 8})])
+                                                   ((), 0.0, 0.0, {"link_loss": "infonce+bce", "link_k": 8}),
+                                                   ((), 0.0, 0.5, {"assoc_fuse": True, "link_loss": "infonce", "link_k": 8}),
+                                                   ((), 0.0, 0.0, {"assoc_fuse": True}),
+                                                   (("knn", "gmm"), 0.5, 0.0, {"hg_signal": "links"}),
+                                                   (("knn", "gmm"), 0.0, 0.0, {"hg_signal": "links", "link_loss": "infonce", "link_k": 8})])
 def test_scores_ignore_labels_outside_train_block(views, lam, lam_a, extra):
     cfg = Config(views=views, lam_cl=lam, lam_assoc=lam_a, **extra, epochs=30, eval_every=10, k_lnc=4, k_dis=3, g_lnc=3, g_dis=2, m=16, hidden=32)
     dev = "cpu"

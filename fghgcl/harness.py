@@ -23,7 +23,7 @@ def build(cfg_dict: dict):
     if d.pop("model", "fghgcl") == "chain":
         from .chain import ChainConfig, ChainModel
         return ChainConfig(**d), ChainModel
-    for k in ("views", "dis_views", "extra_src"):
+    for k in ("views", "dis_views", "extra_src", "kg_lnc", "kg_dis"):
         if k in d:
             d[k] = tuple(d[k])
     return Config(**d), FGHGCL
